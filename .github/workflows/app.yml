@@ -169,9 +169,11 @@ jobs:
           python3 - "$RELEASE_VERSION" "$NAME" "$SHA256" "$IS_PRERELEASE" <<'EOF'
           import json, pathlib, sys
           version, name, sha256, prerelease = sys.argv[1:5]
+          tag = version                               # v13.9.0-dwicao (tag + asset URLs)
+          version = version.removeprefix("v")          # 13.9.0-dwicao (matches BuildConfig.VERSION_NAME)
           entry = {
               "versionName": version,
-              "apkUrl": f"https://github.com/dwicao/Shizuku/releases/download/{version}/{name}",
+              "apkUrl": f"https://github.com/dwicao/Shizuku/releases/download/{tag}/{name}",
               "sha256": sha256,
           }
           p = pathlib.Path("version.json")
