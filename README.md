@@ -18,7 +18,7 @@ This repository is a **fork of a fork**:
 |---|---|---|---|
 | Original | [RikkaApps/Shizuku](https://github.com/RikkaApps/Shizuku) | RikkaW (RikkaApps) | The original Shizuku project |
 | Upstream fork | [thedjchi/Shizuku](https://github.com/thedjchi/Shizuku) | thedjchi | Added the features below; upstream maintains a pause notice on this project |
-| **This fork** | **[dwicao/Shizuku](https://github.com/dwicao/Shizuku)** | **dwicao** | Continues stealth-mode development; in-app updater points at this fork's releases |
+| **This fork** | **[dwicao/Shizuku](https://github.com/dwicao/Shizuku)** | **dwicao** | Stealth by default (`moe.dwicao.shizuku`); in-app updater driven by this repo's `version.json` |
 
 All credit for the original app and the upstream added features goes to RikkaApps and thedjchi. If you were looking for the upstream version, use [thedjchi/Shizuku](https://github.com/thedjchi/Shizuku) instead.
 
@@ -26,52 +26,44 @@ All credit for the original app and the upstream added features goes to RikkaApp
 
 Get the latest release from [GitHub Releases](https://github.com/dwicao/Shizuku/releases/latest).
 
-> **Note:** this fork's builds are signed with this fork's key and **cannot be installed as an in-place update over upstream (thedjchi) builds**. To switch from an upstream build, uninstall it first. If you use stealth mode, install updates from within the hidden app instead — see [Stealth Mode](#-stealth-mode).
+> **Note — one-time identity change:** starting with v13.9.0, this fork uses its own package name (`moe.dwicao.shizuku`) instead of `moe.shizuku.privileged.api`. The v13.8.0 and earlier builds **cannot be updated in place** — uninstall them first, then install the new build and pair it again. Updating *within* the app works normally from then on (see [🥷 Stealth Mode](#-stealth-mode)).
 
 ## ✨ What's in this fork
 
 The headline feature of this fork is **Stealth mode** — see [🥷 Stealth Mode](#-stealth-mode) for the full guide. On top of that, it includes everything the upstream fork added over the original:
 
-* **🥷 Stealth mode:** hide Shizuku from other apps by installing it under a different package name
+* **🥷 Stealth by default:** this fork uses its own package name (`moe.dwicao.shizuku`) instead of the original one, so apps that detect Shizuku at the original package name simply can't see it — see [🥷 Stealth Mode](#-stealth-mode) for the full guide
 * **More robust "start on boot":** waits for a Wi-Fi connection before starting the Shizuku service
 * **TCP mode:** (i.e., the `adb tcpip` command) once Shizuku successfully starts with Wi-Fi after a reboot, you can stop/restart Shizuku without a Wi-Fi connection!
 * **Watchdog service:** automatically restarts Shizuku if it stops unexpectedly, and can alert you of crashes/potential fixes
 * **Start/stop intents:** toggle Shizuku on-demand using automation apps (e.g., Tasker, MacroDroid, Automate)
-* **[BETA] In-app updates:** option to automatically check for new updates, and can automatically download/install the latest version from this fork's GitHub releases
+* **[BETA] In-app updates:** option to automatically check for new updates, and can automatically download/install the latest version from this fork (update detection is driven by [`version.json`](version.json) in this repository)
 * **Android/Google TV and VR headset support:** UI is now compatible with D-Pad remotes, all TVs are supported (including Android 14+ TVs that require pairing), and the multi-window pairing dialog is toggleable in settings for VR headsets
 * **MediaTek support:** fixes a critical bug in the original v13.6.0 which prevented Shizuku from working on MediaTek devices
 
 ## 🥷 Stealth Mode
 
-Some apps refuse to work — or even launch — when they detect that Shizuku is installed. **Stealth mode** hides Shizuku from those apps by installing it under a different package name, so the usual "is Shizuku installed?" checks come up empty. Shizuku keeps working exactly as before; other apps just can't see it.
+Some apps refuse to work — or even launch — when they detect that Shizuku is installed. This fork is **hidden by default**: it uses its own package name (`moe.dwicao.shizuku`) instead of the original `moe.shizuku.privileged.api`, so the usual "is Shizuku installed?" checks at the original package name come up empty. No setup required — Shizuku itself works exactly as before.
 
-Stealth mode is built into the app — open the **"Hide Shizuku from other apps"** card on the home screen and follow the steps. No PC, root, or manual APK patching required.
+### Compatibility: installing the stub
 
-### How it works
+Apps that rely on Shizuku may stop working, since they look for it at the original package name. To make Shizuku visible to those apps, install the **compatibility stub**:
 
-1. Shizuku builds a **clone** of itself with a new package name. The name is up to you — leave it empty and a random suffix is added automatically.
-2. The clone is re-signed and exported as an APK to a folder you choose.
-3. You uninstall the original Shizuku and install the clone. From then on, Shizuku runs under the new package name and cannot be detected at its original one.
+1. Open the **"Compatibility mode"** card on the home screen.
+2. Tap **Install stub** — Shizuku installs a lightweight stub with the original package name that forwards everything to this app: launcher entry, permission requests, binder requests, and the `shizuku` provider.
+3. Use the apps that require Shizuku as usual.
+4. When you're done, tap **Uninstall stub** to hide Shizuku again.
 
-Your Shizuku authorizations are kept — permissions you granted to apps are restored automatically when the service starts, so previously allowed apps keep working after hiding.
-
-### Unhiding temporarily (for apps that *need* Shizuku)
-
-Apps that rely on Shizuku may stop working while it is hidden, since they look for it at the original package name. As a workaround, you can temporarily **unhide** it:
-
-1. Tap **Unhide** — Shizuku installs a lightweight **stub** with the original package name that forwards to the hidden app: launcher entry, permission requests, binder requests, and the `shizuku` provider all proxy to the hidden build.
-2. Use the apps that require Shizuku as usual.
-3. Tap **Hide** again — the stub is uninstalled and Shizuku is hidden once more.
-
-You can also tap the compatibility card in the stealth mode screen to copy a code snippet you can send to the developer of an affected app, so their "Shizuku installed" check works even while Shizuku is hidden.
+You can also tap the compatibility card on that screen to copy a code snippet you can send to the developer of an affected app, so their "Shizuku installed" check works with this hidden build.
 
 ### Things to know
 
-* You will need to re-pair and re-configure Shizuku after installing the hidden version.
-* **rish** users: re-export the files after installing the hidden version.
-* **Automation intent** users: update your intents with the new package name.
-* **Updates:** the hidden version has a different signature, so you must update Shizuku through the app (in-app updates) — do not try to install the regular release APK over it. After updating while hidden, previously allowed apps get their permission restored automatically on the next service start.
-* Some apps may still be able to detect Shizuku even when hidden.
+* Apps that were allowed to use Shizuku keep their permission — it is restored automatically when the service starts.
+* **rish** users: re-export the files.
+* **Automation intent** users: intents use this build's package name (`moe.dwicao.shizuku`).
+* **Updates:** updates are installed from within the app (or by installing the release APK manually — same package, same signature). Update detection uses [`version.json`](version.json) in this repository instead of the GitHub Releases API.
+* Some apps may still be able to detect this build of Shizuku.
+* Your Shizuku authorizations are kept — permissions you granted to apps are restored automatically when the service starts.
 
 ## 📝 User Guide
 

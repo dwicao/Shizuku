@@ -7,6 +7,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.decodeFromString
+import moe.shizuku.manager.BuildConfig
 import moe.shizuku.manager.R
 import moe.shizuku.manager.ShizukuApplication
 import moe.shizuku.manager.ShizukuSettings
@@ -44,8 +45,10 @@ object UpdateHelper {
             if (commit == 0)  "$major.$minor.$patch" else "$major.$minor.$patch.r$commit"
 
         companion object {
+            // Handles both "13.9.0-dwicao" (stable, commit = 0) and "13.9.0-r1369-beta-dwicao"
+            // (beta, commit = 1369) so beta builds compare newer than the stable they branched from.
             fun parse(tag: String): Version? {
-                val regex = Regex("""(\d+)\.(\d+)\.(\d+)(?:\.r(\d+))?""")
+                val regex = Regex("""(\d+)\.(\d+)\.(\d+)(?:-r(\d+))?""")
                 val match = regex.find(tag) ?: return null
                 val (major, minor, patch, commit) = match.destructured
                 return Version(
@@ -66,17 +69,16 @@ object UpdateHelper {
     )
 
     @Serializable
-    data class GitHubRelease(
-        val tag_name: String,
-        val prerelease: Boolean,
-        val assets: List<GitHubAsset>
+    data class VersionJson(
+        val stable: ChannelJson? = null,
+        val beta: ChannelJson? = null,
     )
 
     @Serializable
-    data class GitHubAsset(
-        val name: String,
-        val browser_download_url: String,
-        val digest: String
+    data class ChannelJson(
+        val versionName: String,
+        val apkUrl: String,
+        val sha256: String,
     )
 
     private lateinit var latestRelease: Release
@@ -99,7 +101,7 @@ object UpdateHelper {
     suspend fun isNewUpdateAvailable(): Boolean {
         val lastPromptedVersion =
             Version.parse(ShizukuSettings.getLastPromptedVersion())
-                ?: Version.parse(getVersionName())
+                ?: Version.parse(currentVersionName())
                 ?: return false
         return if (isUpdateAvailable()) latestRelease.version > lastPromptedVersion else false
     }
@@ -107,9 +109,10 @@ object UpdateHelper {
     suspend fun isUpdateAvailable(): Boolean {
         try {
             val latest = fetchLatestRelease().version ?: return false
-            val current = Version.parse(getVersionName()) ?: return false
+            val current = Version.parse(currentVersionName()) ?: return false
             return latest > current
         } catch (e: Exception) {
+            android.util.Log.e("UpdateHelper", "Failed to check for updates", e)
             Toast
                 .makeText(
                     appContext,
@@ -121,6 +124,8 @@ object UpdateHelper {
     }
 
     fun updateLastPromptedVersion() = ShizukuSettings.setLastPromptedVersion(latestRelease.version.toString())
+
+    private fun currentVersionName(): String = BuildConfig.VERSION_NAME
 
     suspend fun update() {
         try {
@@ -146,36 +151,30 @@ object UpdateHelper {
                 Toast.LENGTH_SHORT,
             ).show()
 
-        val apk =
-            latestRelease.download()?.run {
-                val pm = appContext.packageManager
-                val apkPackageName = pm.getPackageArchiveInfo(
-                    this.path, 0
-                )?.packageName
-                if (app.packageName != apkPackageName) {
-                    try {
-                        android.util.Log.d("UpdateHelper", "Changing package name from $apkPackageName to ${app.packageName}")
-                        changePackageName(app.packageName)
-                    } catch (e: Exception) {
-                        android.util.Log.e("UpdateHelper", "Failed to patch the update APK (hidden mode)", e)
-                        Toast
-                            .makeText(
-                                appContext,
-                                appContext.getString(R.string.update_patch_failed, e.message ?: e.javaClass.simpleName),
-                                Toast.LENGTH_LONG,
-                            ).show()
-                        return
-                    }
-                } else {
-                    this
-                }
-            }
+        val apk = latestRelease.download()
         if (apk == null) {
             Toast
                 .makeText(
                     appContext,
                     appContext.getString(R.string.update_download_failed),
                     Toast.LENGTH_SHORT,
+                ).show()
+            return
+        }
+
+        // Fork builds prior to 13.9.0 used "moe.shizuku.privileged.api". An update APK from
+        // version.json is always built for this package, but guard against a stale or wrong
+        // entry anyway: installing a differently-named APK would silently create a second app
+        // instead of updating.
+        val pm = appContext.packageManager
+        val apkPackageName = pm.getPackageArchiveInfo(apk.path, 0)?.packageName
+        if (app.packageName != apkPackageName) {
+            android.util.Log.e("UpdateHelper", "Update APK package ($apkPackageName) does not match this app (${app.packageName})")
+            Toast
+                .makeText(
+                    appContext,
+                    appContext.getString(R.string.update_incompatible_package),
+                    Toast.LENGTH_LONG,
                 ).show()
             return
         }
@@ -190,37 +189,33 @@ object UpdateHelper {
 
     private suspend fun fetchLatestRelease(): Release =
         withContext(Dispatchers.IO) {
-            val url = "https://api.github.com/repos/dwicao/Shizuku/releases"
+            // version.json is committed to the repository (and rewritten by CI on every
+            // release), so this avoids the GitHub Releases API and its rate limits.
+            val url = "https://raw.githubusercontent.com/dwicao/Shizuku/master/version.json"
             val request = Request.Builder().url(url).build()
             val response = client.newCall(request).execute()
-            val body = response.body?.string() ?: throw Exception("Couldn't fetch releases")
+            val body = response.body?.string() ?: throw Exception("Couldn't fetch version.json")
 
-            val releases = json.decodeFromString<List<GitHubRelease>>(body)
-            val filtered =
+            val parsed = json.decodeFromString<VersionJson>(body)
+            val channel =
                 if (ShizukuSettings.getUpdateMode() == ShizukuSettings.UpdateMode.BETA) {
-                    releases
+                    parsed.beta ?: parsed.stable
                 } else {
-                    releases.filter { !it.prerelease }
+                    parsed.stable ?: parsed.beta
                 }
+                    ?: throw Exception("No releases in version.json")
 
-            filtered
-                .mapNotNull { release ->
-                    val version =
-                        Version.parse(release.tag_name)
-                            ?: return@mapNotNull null
-                    val asset =
-                        release.assets.firstOrNull { it.name.endsWith(".apk") }
-                            ?: return@mapNotNull null
+            val version = Version.parse(channel.versionName) ?: throw Exception("Invalid versionName in version.json")
+            val digest =
+                if (channel.sha256.startsWith("sha256:")) channel.sha256 else "sha256:${channel.sha256}"
+            val filename = channel.apkUrl.substringAfterLast('/').ifBlank { "update.apk" }
 
-                    Release(
-                        version = version,
-                        filename = asset.name,
-                        url = asset.browser_download_url,
-                        digest = asset.digest
-                    )
-                }.maxByOrNull { it.version }
-                ?.also { latestRelease = it }
-                ?: throw Exception("No valid releases found")
+            Release(
+                version = version,
+                filename = filename,
+                url = channel.apkUrl,
+                digest = digest,
+            ).also { latestRelease = it }
         }
 
     private suspend fun Release.download(): File =
@@ -234,15 +229,15 @@ object UpdateHelper {
 
             // Download to filesDir instead of cacheDir: cacheDir may be reclaimed by the
             // system at any time, which would break the install that follows.
-            val apkFile = File(appContext.filesDir, filename)
+            val apkFile = File(appContext.filesDir, "update.apk")
             apkFile.outputStream().use { out ->
                 response.body?.byteStream()?.copyTo(out)
             }
 
             val downloadedDigest = "sha256:" + apkFile.sha256()
-            if (downloadedDigest != digest) {
+            if (!downloadedDigest.equals(digest, ignoreCase = true)) {
                 apkFile.delete()
-                throw SecurityException("Digest of downloaded file does not match the one reported by GitHub")
+                throw SecurityException("Digest of downloaded file does not match version.json")
             }
 
             apkFile

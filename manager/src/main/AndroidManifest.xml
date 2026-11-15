@@ -114,8 +114,7 @@
             android:label="@string/home_terminal_title" />
         <activity
             android:name=".stealth.StealthTutorialActivity"
-            android:label="@string/home_stealth_title"
-            android:windowSoftInputMode="adjustResize" />
+            android:label="@string/home_stealth_title" />
         <activity
             android:name=".settings.SettingsActivity"
             android:exported="false"

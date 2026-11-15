@@ -1,0 +1,8 @@
+{
+  "stable": {
+    "versionName": "13.8.0-thedjchi",
+    "apkUrl": "https://github.com/dwicao/Shizuku/releases/download/v13.8.0-thedjchi/shizuku-v13.8.0-thedjchi.apk",
+    "sha256": "ef0f6e7c78ea85a520f7ecaca3f53a84606997e0b301ce44cab9b03a53cdebe8"
+  },
+  "beta": null
+}

@@ -9,7 +9,6 @@ import android.content.pm.PackageInstaller
 import android.os.Build
 import android.util.Log
 import com.reandroid.apk.ApkModule
-import com.reandroid.archive.FileInputSource
 import com.reandroid.common.Namespace
 import moe.shizuku.manager.ShizukuApplication
 import moe.shizuku.manager.utils.ApkSigner
@@ -27,70 +26,6 @@ val workDir by lazy {
         it.deleteRecursively()
         it.mkdirs()
     }
-}
-
-fun File.changePackageName(newPkgName: String, maybeCreateSigningKey: Boolean = false): File {
-    Log.i(TAG, "Loading APK")
-    val module = ApkModule.loadApkFile(this)
-    val manifest = module.androidManifest
-
-    Log.i(TAG, "Changing package name")
-    val oldPkgName = manifest.packageName
-    manifest.packageName = newPkgName
-
-    Log.i(TAG, "Updating manifest references to $oldPkgName")
-    // Rename references to the package namespace (provider authorities such as
-    // "<pkg>.shizuku" / "<pkg>.fileprovider" and intent-filter actions such as
-    // "<pkg>.intent.action.REQUEST_PERMISSION") so the clone is fully consistent with
-    // its new applicationId. Component class names keep the original package, which is
-    // correct, so only authorities and action attributes are touched. The <queries>
-    // block stays pointing at the original package name so the hidden app can still
-    // detect it.
-    val application = manifest.getApplicationElement()
-    var patchedCount = 0
-
-    fun patchAttribute(attr: com.reandroid.arsc.chunk.xml.ResXmlAttribute?) {
-        if (attr == null || attr.valueType != com.reandroid.arsc.value.ValueType.STRING) return
-        val value = attr.valueAsString ?: return
-        if (value.startsWith("$oldPkgName.")) {
-            val newValue = newPkgName + value.substring(oldPkgName.length)
-            attr.setValueAsString(newValue)
-            patchedCount++
-            Log.v(TAG, "Patched $newValue")
-        }
-    }
-
-    for (tag in listOf("provider", "activity", "activity-alias", "service", "receiver")) {
-        for (element in application.getElements(tag)) {
-            patchAttribute(element.searchAttribute(Namespace.URI_ANDROID, "authorities"))
-
-            for (filter in element.getElements("intent-filter")) {
-                for (action in filter.getElements("action")) {
-                    val attr = action.searchAttribute(Namespace.URI_ANDROID, "name")
-                    // Only the permission-request action is renamed, matching the
-                    // runtime-derived action the server sends. Other actions
-                    // (START/STOP, REQUEST_AUTHORIZATION, ...) are referenced from
-                    // BuildConfig.APPLICATION_ID, which stays frozen, so they must
-                    // stay frozen too.
-                    if (attr?.valueAsString == "$oldPkgName.intent.action.REQUEST_PERMISSION") {
-                        attr.setValueAsString(newPkgName + ".intent.action.REQUEST_PERMISSION")
-                        patchedCount++
-                        Log.v(TAG, "Patched ${attr.valueAsString}")
-                    }
-                }
-            }
-        }
-    }
-    Log.i(TAG, "Patched $patchedCount manifest references")
-
-    Log.i(TAG, "Inserting signing key")
-    val key = ApkSigner.getSigningKey(maybeCreateSigningKey)
-    val keystore = ApkSigner.keystoreFile
-    val keyInputSource = FileInputSource(keystore, "assets/${keystore.name}")
-    module.add(keyInputSource)
-
-    val outFile = File(workDir, "signed.apk")
-    return module.buildAndSign(outFile)
 }
 
 fun createStubApk(clonePackageName: String): File {
@@ -142,28 +77,6 @@ private fun ApkModule.buildAndSign(
     ApkSigner.sign(unsignedApk, outFile, key)
 
     return outFile
-}
-
-fun getAppLabel(): String =
-    app
-        .applicationInfo
-        .loadLabel(appContext.packageManager)
-        .toString()
-
-fun getVersionName(): String =
-    appContext
-        .packageManager
-        .getPackageInfo(app.packageName, 0)
-        .versionName
-        .orEmpty()
-
-fun buildApkFilename(): String {
-    val safeLabel =
-        getAppLabel()
-            .lowercase()
-            .replace("[^a-z0-9._-]".toRegex(), "-")
-
-    return "$safeLabel-${getVersionName()}.apk"
 }
 
 fun Context.installPackage(

@@ -151,3 +151,35 @@ jobs:
           FLAGS="--draft"
           [ "${{ inputs.prerelease }}" = "true" ] && FLAGS="$FLAGS --prerelease"
           gh release create "$RELEASE_VERSION" files/*.apk $FLAGS
+
+      - name: Update version.json
+        env:
+          RELEASE_VERSION: ${{ needs.build.outputs.versionName }}
+          IS_PRERELEASE: ${{ inputs.prerelease }}
+        run: |
+          APK=$(ls files/*.apk)
+          NAME=$(basename "$APK")
+          SHA256=$(sha256sum "$APK" | cut -d' ' -f1)
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin master
+          git checkout -B master origin/master
+
+          python3 - "$RELEASE_VERSION" "$NAME" "$SHA256" "$IS_PRERELEASE" <<'EOF'
+          import json, pathlib, sys
+          version, name, sha256, prerelease = sys.argv[1:5]
+          entry = {
+              "versionName": version,
+              "apkUrl": f"https://github.com/dwicao/Shizuku/releases/download/{version}/{name}",
+              "sha256": sha256,
+          }
+          p = pathlib.Path("version.json")
+          data = json.loads(p.read_text()) if p.exists() else {"stable": None, "beta": None}
+          data["beta" if prerelease == "true" else "stable"] = entry
+          p.write_text(json.dumps(data, indent=2) + "\n")
+          EOF
+
+          git add version.json
+          git commit -m "ci: update version.json for ${RELEASE_VERSION}" || exit 0
+          git push origin master

@@ -1,6 +1,7 @@
 package moe.shizuku.manager.stealth
 
 import android.app.Application
+import android.content.Context
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
@@ -8,9 +9,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import moe.shizuku.manager.R
 import moe.shizuku.manager.utils.ApkUtils.*
-import java.io.File
 
 sealed class UiState {
     data class Idle(
@@ -19,9 +18,8 @@ sealed class UiState {
 
     object Loading : UiState()
 
-    data class Pending(
-        val apk: File,
-        val apkType: ApkType
+    data class PendingInstall(
+        val apk: java.io.File,
     ) : UiState()
 
     data class Error(
@@ -30,14 +28,8 @@ sealed class UiState {
 }
 
 enum class Action {
-    HIDE,
-    UNHIDE,
-    REHIDE
-}
-
-enum class ApkType {
-    CLONE,
-    STUB
+    INSTALL_STUB,
+    UNINSTALL_STUB,
 }
 
 class StealthTutorialViewModel(
@@ -46,50 +38,34 @@ class StealthTutorialViewModel(
     private val app: Application = getApplication()
     private val appContext = app.applicationContext
 
-    private val _uiState = MutableLiveData<UiState>(UiState.Idle(Action.HIDE))
+    private val _uiState = MutableLiveData<UiState>(UiState.Idle(Action.UNINSTALL_STUB))
     val uiState: LiveData<UiState> = _uiState
-
-    private var _packageName: String? = null
-
-    private fun isShizukuHidden() =
-        runCatching {
-            appContext.packageManager.getPackageInfo(ORIGINAL_PACKAGE_NAME, 0)
-        }.isFailure
 
     init {
         refresh()
     }
 
+    private fun isStubInstalled() =
+        runCatching {
+            appContext.packageManager.getPackageInfo(ORIGINAL_PACKAGE_NAME, 0)
+        }.isSuccess
+
     fun refresh() {
-        val action =
-            if (isShizukuHidden()) Action.UNHIDE
-            else if (app.packageName == ORIGINAL_PACKAGE_NAME) Action.HIDE
-            else Action.REHIDE
-        _uiState.value = UiState.Idle(action)
+        _uiState.value = UiState.Idle(
+            if (isStubInstalled()) Action.UNINSTALL_STUB else Action.INSTALL_STUB
+        )
     }
 
-    fun setPackageName(packageName: String? = null) {
-        _packageName = packageName ?: app.packageName.appendUniqueRandomSuffix()
-    }
-
-    fun createApk(apkType: ApkType) {
+    fun onInstallStub() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 _uiState.postValue(UiState.Loading)
-
-                val apk =
-                    when (apkType) {
-                        ApkType.CLONE -> {
-                            File(app.applicationInfo.sourceDir)
-                                .changePackageName(_packageName!!, maybeCreateSigningKey = true)
-                        }
-                        ApkType.STUB -> createStubApk(app.packageName)
-                    }
-
-                _uiState.postValue(UiState.Pending(apk, apkType))
+                // The stub carries the original package name and forwards everything to this app.
+                val apk = createStubApk(app.packageName)
+                _uiState.postValue(UiState.PendingInstall(apk))
             } catch (e: Exception) {
                 _uiState.postValue(UiState.Error(e))
-                Log.e("StealthTutorialViewModel", "Error creating APK", e)
+                Log.e("StealthTutorialViewModel", "Error creating stub APK", e)
             }
         }
     }
@@ -98,57 +74,4 @@ class StealthTutorialViewModel(
         super.onCleared()
         workDir.deleteRecursively()
     }
-}
-
-fun String.validatePackageName(): Int? =
-    when {
-        this.isBlank() -> null
-
-        this.length > 150 ->
-            R.string.stealth_error_too_long
-
-        !this.matches(Regex("^[a-zA-Z0-9.]+$")) ->
-            R.string.stealth_error_invalid_characters
-
-        this == ORIGINAL_PACKAGE_NAME ->
-            R.string.stealth_error_original_package
-
-        this.split('.').any { it.isEmpty() } ->
-            R.string.stealth_error_empty_segment
-
-        this.split('.').any { it.firstOrNull()?.isDigit() == true } ->
-            R.string.stealth_error_segment_starts_with_number
-
-        this.split('.').size < 2 ->
-            R.string.stealth_error_needs_two_segments
-
-        else -> null
-    }
-
-private fun String.appendRandomSuffix(): String {
-    val letters = ('a'..'z')
-    val chars = letters + ('0'..'9')
-
-    val first = letters.random()
-    val rest = (1..4).map { chars.random() }
-
-    val randomSuffix = (listOf(first) + rest).joinToString("")
-
-    return "$this.$randomSuffix"
-}
-
-private fun String.appendUniqueRandomSuffix(): String {
-    // Regenerate a few times in case the candidate is already taken; the chance of this
-    // happening is tiny, but installing a clone over an existing app fails with a
-    // signature mismatch error that would confuse users.
-    val context = moe.shizuku.manager.ShizukuApplication.appContext
-    repeat(10) {
-        val candidate = appendRandomSuffix()
-        val taken =
-            runCatching {
-                context.packageManager.getPackageInfo(candidate, 0)
-            }.isSuccess
-        if (!taken) return candidate
-    }
-    return appendRandomSuffix()
 }
