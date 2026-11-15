@@ -164,7 +164,7 @@ object UpdateHelper {
                                 appContext.getString(R.string.update_patch_failed, e.message ?: e.javaClass.simpleName),
                                 Toast.LENGTH_LONG,
                             ).show()
-                        return@update
+                        return
                     }
                 } else {
                     this
