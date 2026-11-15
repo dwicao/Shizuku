@@ -69,7 +69,7 @@ class StealthTutorialViewModel(
     }
 
     fun setPackageName(packageName: String? = null) {
-        _packageName = packageName ?: app.packageName.appendRandomSuffix()
+        _packageName = packageName ?: app.packageName.appendUniqueRandomSuffix()
     }
 
     fun createApk(apkType: ApkType) {
@@ -83,7 +83,7 @@ class StealthTutorialViewModel(
                             File(app.applicationInfo.sourceDir)
                                 .changePackageName(_packageName!!, maybeCreateSigningKey = true)
                         }
-                        ApkType.STUB -> createStubApk(ORIGINAL_PACKAGE_NAME)
+                        ApkType.STUB -> createStubApk(app.packageName)
                     }
 
                 _uiState.postValue(UiState.Pending(apk, apkType))
@@ -104,17 +104,23 @@ fun String.validatePackageName(): Int? =
     when {
         this.isBlank() -> null
 
+        this.length > 150 ->
+            R.string.stealth_error_too_long
+
         !this.matches(Regex("^[a-zA-Z0-9.]+$")) ->
             R.string.stealth_error_invalid_characters
+
+        this == ORIGINAL_PACKAGE_NAME ->
+            R.string.stealth_error_original_package
+
+        this.split('.').any { it.isEmpty() } ->
+            R.string.stealth_error_empty_segment
 
         this.split('.').any { it.firstOrNull()?.isDigit() == true } ->
             R.string.stealth_error_segment_starts_with_number
 
         this.split('.').size < 2 ->
             R.string.stealth_error_needs_two_segments
-
-        this.endsWith('.') ->
-            R.string.stealth_error_ends_with_period
 
         else -> null
     }
@@ -129,4 +135,20 @@ private fun String.appendRandomSuffix(): String {
     val randomSuffix = (listOf(first) + rest).joinToString("")
 
     return "$this.$randomSuffix"
+}
+
+private fun String.appendUniqueRandomSuffix(): String {
+    // Regenerate a few times in case the candidate is already taken; the chance of this
+    // happening is tiny, but installing a clone over an existing app fails with a
+    // signature mismatch error that would confuse users.
+    val context = moe.shizuku.manager.ShizukuApplication.appContext
+    repeat(10) {
+        val candidate = appendRandomSuffix()
+        val taken =
+            runCatching {
+                context.packageManager.getPackageInfo(candidate, 0)
+            }.isSuccess
+        if (!taken) return candidate
+    }
+    return appendRandomSuffix()
 }

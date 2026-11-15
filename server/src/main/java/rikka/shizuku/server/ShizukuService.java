@@ -64,6 +64,12 @@ public class ShizukuService extends Service<ShizukuUserServiceManager, ShizukuCl
 
     public static final String MANAGER_APPLICATION_ID;
 
+    // Action handled by the manager's REQUEST_PERMISSION activity. Derived from the manager's
+    // (possibly renamed) package at patch time, so it matches the manifest of both the regular
+    // and hidden packages. Assigned in the static block below, after MANAGER_APPLICATION_ID is
+    // resolved from CLASSPATH.
+    private static final String REQUEST_PERMISSION_ACTION;
+
     static {
         String packageName = null;
         try {
@@ -87,6 +93,9 @@ public class ShizukuService extends Service<ShizukuUserServiceManager, ShizukuCl
             LOGGER.w("Couldn't get manager package name from CLASSPATH", tr);
         }
         MANAGER_APPLICATION_ID = packageName;
+        REQUEST_PERMISSION_ACTION = (packageName != null)
+                ? packageName + ".intent.action.REQUEST_PERMISSION"
+                : "moe.shizuku.privileged.api.intent.action.REQUEST_PERMISSION";
     }
 
 
@@ -154,6 +163,7 @@ public class ShizukuService extends Service<ShizukuUserServiceManager, ShizukuCl
         BinderSender.register(this);
 
         mainHandler.post(() -> {
+            restoreRuntimePermissions();
             sendBinderToClient();
             sendBinderToManager();
         });
@@ -302,14 +312,32 @@ public class ShizukuService extends Service<ShizukuUserServiceManager, ShizukuCl
             return;
         }
 
-        Intent intent = new Intent(ServerConstants.REQUEST_PERMISSION_ACTION)
+        Intent intent = new Intent(REQUEST_PERMISSION_ACTION)
                 .setPackage(MANAGER_APPLICATION_ID)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_NEW_DOCUMENT)
                 .putExtra("uid", callingUid)
                 .putExtra("pid", callingPid)
                 .putExtra("requestCode", requestCode)
                 .putExtra("applicationInfo", ai);
-        ActivityManagerApis.startActivityNoThrow(intent, null, isWorkProfileUser ? 0 : userId);
+        try {
+            ActivityManagerApis.startActivityNoThrow(intent, null, isWorkProfileUser ? 0 : userId);
+        } catch (Throwable tr) {
+            // Older hidden clones only respond to the legacy action (built from the original
+            // applicationId); fall back to it.
+            LOGGER.w(tr, "start REQUEST_PERMISSION with runtime action failed; retrying with legacy action");
+            try {
+                Intent fallback = new Intent(ServerConstants.REQUEST_PERMISSION_ACTION_LEGACY)
+                        .setPackage(MANAGER_APPLICATION_ID)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_NEW_DOCUMENT)
+                        .putExtra("uid", callingUid)
+                        .putExtra("pid", callingPid)
+                        .putExtra("requestCode", requestCode)
+                        .putExtra("applicationInfo", ai);
+                ActivityManagerApis.startActivityNoThrow(fallback, null, isWorkProfileUser ? 0 : userId);
+            } catch (Throwable tr2) {
+                LOGGER.e(tr2, "start REQUEST_PERMISSION with legacy action failed");
+            }
+        }
     }
 
     @Override
@@ -499,6 +527,47 @@ public class ShizukuService extends Service<ShizukuUserServiceManager, ShizukuCl
             return true;
         }
         return super.onTransact(code, data, reply, flags);
+    }
+
+    /**
+     * Re-grants (or revokes) the Shizuku permission for apps the manager previously
+     * allowed/denied. Hiding Shizuku replaces the manager package, which purges the
+     * runtime permission grants; the persisted config is the source of truth, so
+     * restore OS-level grants to match it. Without this, previously allowed apps lose
+     * the Shizuku permission until the user re-requests it.
+     */
+    private void restoreRuntimePermissions() {
+        try {
+            List<ShizukuConfig.PackageEntry> entries = configManager.getEntries();
+
+            for (ShizukuConfig.PackageEntry entry : entries) {
+                boolean allowed = entry.isAllowed();
+                boolean denied = entry.isDenied();
+                if (!allowed && !denied) {
+                    continue;
+                }
+
+                int userId = UserHandleCompat.getUserId(entry.uid);
+
+                for (String packageName : entry.packages) {
+                    try {
+                        int state = Android17Compat.checkPermission(PERMISSION, packageName, userId);
+
+                        if (allowed && state != PackageManager.PERMISSION_GRANTED) {
+                            Android17Compat.grantRuntimePermission(packageName, PERMISSION, userId);
+                            LOGGER.i("restored Shizuku permission for %s in user %d", packageName, userId);
+                        } else if (denied && state == PackageManager.PERMISSION_GRANTED) {
+                            Android17Compat.revokeRuntimePermission(packageName, PERMISSION, userId);
+                            LOGGER.i("revoked Shizuku permission for %s in user %d", packageName, userId);
+                        }
+                    } catch (Throwable tr) {
+                        LOGGER.w(tr, "restore permission for %s in user %d", packageName, userId);
+                    }
+                }
+            }
+        } catch (Throwable tr) {
+            LOGGER.w(tr, "restoreRuntimePermissions failed");
+        }
     }
 
     void sendBinderToClient() {

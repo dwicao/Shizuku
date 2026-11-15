@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-sdk
+        android:minSdkVersion="24"
+        android:targetSdkVersion="37" />
+
+    <application
+        android:allowBackup="false"
+        android:debuggable="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name">
+
+        <meta-data
+            android:name="moe.shizuku.stub.CLONE_PACKAGE"
+            android:value="@@CLONE_PACKAGE@@" />
+
+        <activity
+            android:name=".StubLauncherActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".StubRequestPermissionActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="moe.shizuku.privileged.api.intent.action.REQUEST_PERMISSION" />
+            </intent-filter>
+        </activity>
+
+        <receiver
+            android:name=".StubBinderRequestReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="rikka.shizuku.intent.action.REQUEST_BINDER" />
+            </intent-filter>
+        </receiver>
+
+        <provider
+            android:name=".StubShizukuProvider"
+            android:authorities="moe.shizuku.privileged.api.shizuku"
+            android:directBootAware="true"
+            android:exported="true"
+            android:multiprocess="false"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
+    </application>
+</manifest>

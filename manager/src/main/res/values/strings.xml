@@ -131,16 +131,19 @@
 
     <!-- Stealth -->
     <string name="stealth_warning_compatibility">Some apps that use Shizuku may not work when Shizuku is hidden because they try to detect if Shizuku is installed.</string>
-    <string name="stealth_warning_compatibility_2">As a workaround, you can temporarily unhide Shizuku, which installs a stub with the original package name. When you are finished, you can re-hide Shizuku.</string>
+    <string name="stealth_warning_compatibility_2">As a workaround, you can temporarily unhide Shizuku, which installs a stub with the original package name that forwards to the hidden app. When you are finished, you can re-hide Shizuku.</string>
     <string name="stealth_warning_compatibility_3">Tap this card to copy a code snippet you can send to the developer so their \"Shizuku installed\" check will work when Shizuku is hidden.</string>
     <string name="stealth_warning_detection">Some apps may still be able to detect Shizuku even when hidden.</string>
-    <string name="stealth_info_reconfigure">You will need to re-pair and re-configure Shizuku after installing the hidden version.</string>
+    <string name="stealth_info_reconfigure">Apps that were allowed to use Shizuku keep their permission: it is restored automatically when the service starts. You will need to re-pair and re-configure Shizuku after installing the hidden version.</string>
     <string name="stealth_info_rish">Rish users: re-export the files after installing the hidden version.</string>
     <string name="stealth_info_intents">Intent users: update your intents with the new package name.</string>
     <string name="stealth_info_update">You must update Shizuku through the app when using the hidden version because it has a different signature.</string>
     <string name="stealth_package_name">Package name (optional)</string>
     <string name="stealth_package_name_helper_text">If left empty, a random suffix will be added to the package name.</string>
     <string name="stealth_error_ends_with_period">Package name cannot end with a period.</string>
+    <string name="stealth_error_empty_segment">Package name cannot contain empty segments (consecutive or leading/trailing periods).</string>
+    <string name="stealth_error_original_package">Package name must be different from the original app.</string>
+    <string name="stealth_error_too_long">Package name is too long.</string>
     <string name="stealth_error_invalid_characters">Only letters, numbers, and periods are allowed.</string>
     <string name="stealth_error_needs_two_segments">Package name must have at least two segments.</string>
     <string name="stealth_error_segment_starts_with_number">Segments cannot start with a number.</string>
@@ -216,6 +219,7 @@
     <string name="update_download_failed">Failed to download update</string>
     <string name="update_success">Update successful</string>
     <string name="update_failed">Update failed</string>
+    <string name="update_patch_failed">Update failed: couldn\'t prepare the hidden-mode update. (%1$s)</string>
 
     <!-- Toast -->
     <string name="toast_no_email_app">No email app found</string>

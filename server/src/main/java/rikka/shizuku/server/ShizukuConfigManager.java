@@ -200,6 +200,23 @@ public class ShizukuConfigManager extends ConfigManager {
         return null;
     }
 
+    /**
+     * Returns a snapshot of all entries (with copied package lists) so callers can
+     * iterate without holding the internal lock. Used to restore runtime permissions
+     * on server start.
+     */
+    public List<ShizukuConfig.PackageEntry> getEntries() {
+        synchronized (this) {
+            List<ShizukuConfig.PackageEntry> copy = new ArrayList<>();
+            for (ShizukuConfig.PackageEntry entry : config.packages) {
+                ShizukuConfig.PackageEntry e = new ShizukuConfig.PackageEntry(entry.uid, entry.flags);
+                e.packages.addAll(entry.packages);
+                copy.add(e);
+            }
+            return copy;
+        }
+    }
+
     @Nullable
     public ShizukuConfig.PackageEntry find(int uid) {
         synchronized (this) {

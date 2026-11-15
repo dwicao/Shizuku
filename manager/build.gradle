@@ -120,6 +120,8 @@ afterEvaluate {
     tasks.getByName("optimizeReleaseResources").finalizedBy(collapseReleaseResourceNames)
     tasks.getByName("preReleaseBuild").dependsOn(":shell:assembleRelease")
     tasks.getByName("preDebugBuild").dependsOn(":shell:assembleDebug")
+    tasks.getByName("preReleaseBuild").dependsOn(":stub:assembleRelease")
+    tasks.getByName("preDebugBuild").dependsOn(":stub:assembleRelease")
 }
 
 android.applicationVariants.configureEach { variant ->

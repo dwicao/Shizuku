@@ -14,6 +14,7 @@ import moe.shizuku.manager.utils.ApkUtils.*
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
+import java.io.IOException
 import java.security.MessageDigest
 
 object UpdateHelper {
@@ -122,6 +123,20 @@ object UpdateHelper {
     fun updateLastPromptedVersion() = ShizukuSettings.setLastPromptedVersion(latestRelease.version.toString())
 
     suspend fun update() {
+        try {
+            updateInternal()
+        } catch (e: Exception) {
+            android.util.Log.e("UpdateHelper", "Update failed", e)
+            Toast
+                .makeText(
+                    appContext,
+                    appContext.getString(R.string.update_failed),
+                    Toast.LENGTH_LONG,
+                ).show()
+        }
+    }
+
+    private suspend fun updateInternal() {
         if (!::latestRelease.isInitialized && !isUpdateAvailable()) return
 
         Toast
@@ -142,11 +157,12 @@ object UpdateHelper {
                         android.util.Log.d("UpdateHelper", "Changing package name from $apkPackageName to ${app.packageName}")
                         changePackageName(app.packageName)
                     } catch (e: Exception) {
+                        android.util.Log.e("UpdateHelper", "Failed to patch the update APK (hidden mode)", e)
                         Toast
                             .makeText(
                                 appContext,
-                                appContext.getString(R.string.update_failed),
-                                Toast.LENGTH_SHORT,
+                                appContext.getString(R.string.update_patch_failed, e.message ?: e.javaClass.simpleName),
+                                Toast.LENGTH_LONG,
                             ).show()
                         return@update
                     }
@@ -212,14 +228,22 @@ object UpdateHelper {
             val request = Request.Builder().url(url).build()
             val response = client.newCall(request).execute()
 
-            val apkFile = File(appContext.cacheDir, filename)
+            if (!response.isSuccessful) {
+                throw IOException("Download failed with HTTP ${response.code}")
+            }
+
+            // Download to filesDir instead of cacheDir: cacheDir may be reclaimed by the
+            // system at any time, which would break the install that follows.
+            val apkFile = File(appContext.filesDir, filename)
             apkFile.outputStream().use { out ->
                 response.body?.byteStream()?.copyTo(out)
             }
 
             val downloadedDigest = "sha256:" + apkFile.sha256()
-            if (downloadedDigest != digest)
+            if (downloadedDigest != digest) {
+                apkFile.delete()
                 throw SecurityException("Digest of downloaded file does not match the one reported by GitHub")
+            }
 
             apkFile
         }

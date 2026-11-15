@@ -1,0 +1,42 @@
+plugins {
+    id "com.android.application"
+}
+
+android {
+    namespace = "moe.shizuku.stub"
+
+    defaultConfig {
+        applicationId = "moe.shizuku.privileged.api"
+        versionCode = 1
+        versionName = "1.0.0"
+
+        ndkVersion = "29.0.13113456"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled = false
+        }
+    }
+
+    buildFeatures {
+        buildConfig = false
+    }
+
+    lint {
+        checkReleaseBuilds = false
+    }
+}
+
+
+android.applicationVariants.all { variant ->
+    variant.assembleProvider.get().doLast {
+        copy {
+            from("${buildDir}/outputs/apk/${variant.name}") {
+                include "*.apk"
+            }
+            into "${rootDir}/manager/src/main/assets"
+            rename { "stub.apk" }
+        }
+    }
+}
