@@ -1,8 +1,8 @@
 {
   "stable": {
-    "versionName": "13.9.0-dwicao",
-    "apkUrl": "https://github.com/dwicao/Shizuku/releases/download/v13.9.0-dwicao/shizuku-v13.9.0-dwicao.apk",
-    "sha256": "a9edbc803fa4e4fefc3af8ef110da4e5b9bfefe13701598a333b73b974b954a1"
+    "versionName": "13.9.1-dwicao",
+    "apkUrl": "https://github.com/dwicao/Shizuku/releases/download/v13.9.1-dwicao/shizuku-v13.9.1-dwicao.apk",
+    "sha256": "e3d490afb91ba0b9ffa252599181806cfc353a1396c46e17565db9a1b39eeeb4"
   },
   "beta": null
 }
