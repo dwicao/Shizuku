@@ -37,11 +37,43 @@ This version of Shizuku includes some extra features over the original version, 
 * **TCP mode:** (i.e., the `adb tcpip` command) once Shizuku successfully starts with Wi-Fi after a reboot, you can stop/restart Shizuku without a Wi-Fi connection!
 * **Watchdog service:** automatically restarts Shizuku if it stops unexpectedly, and can alert you of crashes/potential fixes
 * **Start/stop intents:** toggle Shizuku on-demand using automation apps (e.g., Tasker, MacroDroid, Automate)
-* **Stealth mode:** hide Shizuku from other apps that don't work when Shizuku is installed
+* **Stealth mode:** hide Shizuku from other apps by installing it under a different package name — see [🥷 Stealth Mode](#-stealth-mode) below for details
 * **[BETA] In-app updates:** option to automatically check for new updates, and can automatically download/install the latest version from GitHub
 * **Android/Google TV and VR headset support:** UI is now compatible with D-Pad remotes, all TVs are supported (including Android 14+ TVs that require pairing), and the multi-window pairing dialog is toggleable in settings for VR headsets
 * **MediaTek support:** fixes a critical bug in the original v13.6.0 which prevented Shizuku from working on MediaTek devices
 * And more!
+
+## 🥷 Stealth Mode
+
+Some apps refuse to work — or even launch — when they detect that Shizuku is installed. **Stealth mode** hides Shizuku from those apps by installing it under a different package name, so the usual "is Shizuku installed?" checks come up empty. Shizuku keeps working exactly as before; other apps just can't see it.
+
+Stealth mode is built into the app — open the **"Hide Shizuku from other apps"** card on the home screen and follow the steps. No PC, root, or manual APK patching required.
+
+### How it works
+
+1. Shizuku builds a **clone** of itself with a new package name. The name is up to you — leave it empty and a random suffix is added automatically.
+2. The clone is re-signed and exported as an APK to a folder you choose.
+3. You uninstall the original Shizuku and install the clone. From then on, Shizuku runs under the new package name and cannot be detected at its original one.
+
+Your Shizuku authorizations are kept — permissions you granted to apps are restored automatically when the service starts.
+
+### Unhiding temporarily (for apps that *need* Shizuku)
+
+Apps that rely on Shizuku may stop working while it is hidden, since they look for it at the original package name. As a workaround, you can temporarily **unhide** it:
+
+1. Tap **Unhide** — Shizuku builds and installs a lightweight **stub** with the original package name that simply forwards everything to the hidden app.
+2. Use the apps that require Shizuku as usual.
+3. Tap **Hide** again — the stub is uninstalled and Shizuku is hidden once more.
+
+You can also tap the compatibility card in the stealth mode screen to copy a code snippet you can send to the developer of an affected app, so their "Shizuku installed" check works even while Shizuku is hidden.
+
+### Things to know
+
+* You will need to re-pair and re-configure Shizuku after installing the hidden version.
+* **rish** users: re-export the files after installing the hidden version.
+* **Automation intent** users: update your intents with the new package name.
+* **Updates:** the hidden version has a different signature, so you must update Shizuku through the app (in-app updates) — do not try to install the regular release APK over it.
+* Some apps may still be able to detect Shizuku even when hidden.
 
 ## 📝 User Guide
 
