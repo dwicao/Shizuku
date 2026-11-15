@@ -71,10 +71,7 @@ abstract class HomeActivity : AppBarActivity() {
         }
 
         homeModel.shouldShowRebootDialog.observe(this) { shouldShow ->
-            if (shouldShow) showExitDialog(
-                getString(R.string.home_dialog_reboot_required_title),
-                getString(R.string.home_dialog_reboot_required_message)
-            )
+            if (shouldShow) showRebootDialog()
         }
 
         homeModel.shouldShowUninstallDialog.observe(this) { shouldShow ->
@@ -176,6 +173,22 @@ abstract class HomeActivity : AppBarActivity() {
 
         dialog.setCanceledOnTouchOutside(false)
         dialog.show()
+    }
+
+    private fun showRebootDialog() {
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.home_dialog_reboot_required_title)
+            .setMessage(getString(R.string.home_dialog_reboot_required_message))
+            .setPositiveButton(R.string.home_dialog_button_retry) { _, _ ->
+                // Re-run the permission check; the dialog reappears only if it still fails.
+                homeModel.reload()
+            }
+            .setNegativeButton(R.string.home_dialog_button_exit) { _, _ ->
+                this.finishAffinity()
+            }
+            .setCancelable(false)
+            .create()
+            .show()
     }
 
     private fun checkServerStatus() {

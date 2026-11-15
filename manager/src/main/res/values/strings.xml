@@ -105,7 +105,8 @@
 
     <!-- Home - Dialogs -->
     <string name="home_dialog_reboot_required_title">Reboot required</string>
-    <string name="home_dialog_reboot_required_message">A device reboot is required for Shizuku to work properly. To continue, please reboot your device.</string>
+    <string name="home_dialog_reboot_required_message">This build of Shizuku uses a different package name than the previous install, and the system hasn\'t updated its permission registry yet — that\'s why Shizuku can\'t see its own API permission right now. A device reboot rebuilds the registry and fixes this permanently. If you already rebooted, tap Retry.</string>
+    <string name="home_dialog_button_retry">Retry</string>
     <string name="home_dialog_duplicate_app_detected_title">Duplicate app detected</string>
     <string name="home_dialog_duplicate_app_detected_message">Another version of this app is installed on your device. To continue, please uninstall all duplicate versions and reboot your device.</string>
     <string name="home_dialog_button_exit">Exit</string>

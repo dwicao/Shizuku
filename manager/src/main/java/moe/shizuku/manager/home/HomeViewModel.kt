@@ -20,6 +20,7 @@ import moe.shizuku.manager.utils.Logger.LOGGER
 import moe.shizuku.manager.utils.SettingsHelper
 import moe.shizuku.manager.utils.ShizukuStateMachine
 import moe.shizuku.manager.utils.ShizukuSystemApis
+import moe.shizuku.manager.utils.ApkUtils.ORIGINAL_PACKAGE_NAME
 import rikka.lifecycle.Resource
 import rikka.shizuku.Shizuku
 
@@ -40,15 +41,22 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     val shouldShowUninstallDialog: LiveData<Boolean> = _shouldShowUninstallDialog
 
     private fun load(): ServiceStatus {
-        // In certain cases when user re-installs Shizuku with different package name (e.g., when using stealth mode), the system doesn't recognize the Shizuku permission.
-        // As a result, all permission operations (check/grant/revoke) will fail.
-        // This is fixed by rebooting the device.
-        // Run getPermissionGroupInfo() to trigger the exception. Then catch it and show a dialog prompting the user to reboot their device.
+        // Shizuku's API permission is declared by this app, but re-installing it with a
+        // different package name (stealth mode / forks) can leave the system's permission
+        // registry stale: getPermissionInfo() may throw, or return a stale owner package.
+        // Neither case is healable from inside the app — a reboot rebuilds the registry.
+        // Reset the reboot flag first so a no-longer-broken state clears the dialog.
+        _shouldShowRebootDialog.postValue(false)
         try {
-            val permissionGroup = appContext.packageManager.getPermissionGroupInfo(Manifest.permission_group.API, 0)
             val permission = appContext.packageManager.getPermissionInfo(Manifest.permission.API_V23, 0)
             if (permission.packageName != appContext.packageName) {
-                _shouldShowUninstallDialog.postValue(true)
+                if (isOriginalPackageInstalled()) {
+                    // Genuinely another build still installed (e.g., an older fork build)
+                    _shouldShowUninstallDialog.postValue(true)
+                } else {
+                    // Registry still points at the old, already-uninstalled package — stale, not a duplicate
+                    _shouldShowRebootDialog.postValue(true)
+                }
             }
         } catch (e: PackageManager.NameNotFoundException) {
             _shouldShowRebootDialog.postValue(true)
@@ -90,6 +98,11 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
+
+    private fun isOriginalPackageInstalled(): Boolean =
+        runCatching {
+            appContext.packageManager.getPackageInfo(ORIGINAL_PACKAGE_NAME, 0)
+        }.isSuccess
 
     fun checkBatteryOptimization() {
         if (EnvironmentUtils.isTelevision()) return
