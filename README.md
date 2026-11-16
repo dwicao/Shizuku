@@ -73,6 +73,7 @@ This fork does not maintain its own wiki. Please read the [wiki on the upstream 
 ## ☑️ Requirements
 
 **Minimum Version: Android 7+**
+- This fork targets SDK 36 (Android 16) instead of the latest SDK so older devices — particularly Android 13 Samsung installs — are not refused for future-SDK declarations.
 - **Root mode:** Requires a rooted device
 - **Wireless Debugging mode:** Works on Android 11+ and all Android TVs
 - **PC mode:** Works on all devices

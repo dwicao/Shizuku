@@ -6,11 +6,9 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.INTERNET" />
-    <!-- Android 17 (SDK 37): local network access is gated behind these permissions;
-         required for mDNS discovery used by wireless ADB pairing and for the
-         privileged server to reach loopback. -->
-    <uses-permission android:name="android.permission.USE_LOOPBACK_INTERFACE" />
-    <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
+    <!-- Android 16 (SDK 36) gates nearby Wi-Fi discovery behind NEARBY_WIFI_DEVICES. Apps targeting
+         SDK 36 or lower get local network/loopback access implicitly from INTERNET instead of the
+         Android 17-only ACCESS_LOCAL_NETWORK / USE_LOOPBACK_INTERFACE permissions. -->
     <!-- Android 16 gates local-network discovery behind NEARBY_WIFI_DEVICES. -->
     <uses-permission
         android:name="android.permission.NEARBY_WIFI_DEVICES"

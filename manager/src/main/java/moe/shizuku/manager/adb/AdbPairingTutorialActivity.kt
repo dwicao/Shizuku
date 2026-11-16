@@ -95,14 +95,11 @@ class AdbPairingTutorialActivity : AppBarActivity() {
         }
     }
 
-    // Android 17 (SDK 37) gates local-network access behind ACCESS_LOCAL_NETWORK;
-    // Android 16 (SDK 36) uses NEARBY_WIFI_DEVICES. Without a runtime grant the OS
-    // intercepts the pairing connection with an endless "choose a device" picker.
-    private fun localNetworkPermission(): String? = when {
-        Build.VERSION.SDK_INT >= 37 -> "android.permission.ACCESS_LOCAL_NETWORK"
-        Build.VERSION.SDK_INT >= 36 -> Manifest.permission.NEARBY_WIFI_DEVICES
-        else -> null
-    }
+    // Android 17 (SDK 37) apps may need ACCESS_LOCAL_NETWORK; this fork intentionally
+    // targets SDK 36, where Android implicitly grants local network/loopback access to apps holding
+    // the INTERNET permission. Keep NEARBY_WIFI_DEVICES on Android 16+ for mDNS discovery.
+    private fun localNetworkPermission(): String? =
+        if (Build.VERSION.SDK_INT >= 36) Manifest.permission.NEARBY_WIFI_DEVICES else null
 
     private val localNetworkPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) {
