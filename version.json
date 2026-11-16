@@ -1,8 +1,20 @@
 {
   "stable": {
-    "versionName": "13.10.1-dwicao",
-    "apkUrl": "https://github.com/dwicao/Shizuku/releases/download/v13.10.1-dwicao/shizuku-v13.10.1-dwicao.apk",
-    "sha256": "75067f0078611a6bde1ee527e2f05371ef03a187546f1f38d98cedc2f342e78d"
+    "versionName": "13.11.0-dwicao",
+    "apkUrl": "https://github.com/dwicao/Shizuku/releases/download/v13.11.0-dwicao/shizuku-v13.11.0-dwicao-release.apk",
+    "sha256": "6c29f5e9245503abf5a1ad835b9087dee28c55fb9cd88abb86593e85c8317488",
+    "variants": {
+      "moe.dwicao.shizuku": {
+        "versionName": "13.11.0-dwicao",
+        "apkUrl": "https://github.com/dwicao/Shizuku/releases/download/v13.11.0-dwicao/shizuku-v13.11.0-dwicao-release.apk",
+        "sha256": "6c29f5e9245503abf5a1ad835b9087dee28c55fb9cd88abb86593e85c8317488"
+      },
+      "moe.shizuku.privileged.api": {
+        "versionName": "13.11.0-compat-dwicao",
+        "apkUrl": "https://github.com/dwicao/Shizuku/releases/download/v13.11.0-dwicao/shizuku-v13.11.0-compat-dwicao-release.apk",
+        "sha256": "efe3691d278d9d1d8555b59e9eaef16375680dac3f9a0f2be89f79ab4200de03"
+      }
+    }
   },
   "beta": null
 }
