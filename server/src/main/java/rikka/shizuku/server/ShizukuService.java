@@ -465,8 +465,6 @@ public class ShizukuService extends Service<ShizukuUserServiceManager, ShizukuCl
                 } else {
                     Android17Compat.revokeRuntimePermission(packageName, PERMISSION, userId);
                 }
-
-                // TODO kill user service using
             }
         }
 
@@ -474,7 +472,6 @@ public class ShizukuService extends Service<ShizukuUserServiceManager, ShizukuCl
     }
 
     private void onPermissionRevoked(String packageName) {
-        // TODO add runtime permission listener
         getUserServiceManager().removeUserServicesForPackage(packageName);
     }
 

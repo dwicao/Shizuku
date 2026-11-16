@@ -2,12 +2,9 @@ package moe.shizuku.manager.settings
 
 import android.app.Dialog
 import android.app.NotificationManager
-import android.content.ActivityNotFoundException
-import android.content.Context
 import android.content.DialogInterface
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.fragment.app.DialogFragment
@@ -19,6 +16,7 @@ import moe.shizuku.manager.ktx.asLink
 import moe.shizuku.manager.ktx.applyTemplateArgs
 import moe.shizuku.manager.utils.CustomTabsHelper
 import moe.shizuku.manager.worker.AdbStartWorker
+import moe.shizuku.manager.utils.CrashLog
 
 class BugReportDialog : DialogFragment() {
 
@@ -29,13 +27,13 @@ class BugReportDialog : DialogFragment() {
         binding = BugReportDialogBinding.inflate(layoutInflater)
 
         val updateLink = getString(R.string.bug_report_dialog_link_update)
-            .asLink("https://github.com/thedjchi/Shizuku/releases/latest")
+            .asLink("https://github.com/dwicao/Shizuku/releases/latest")
 
         val wikiLink = getString(R.string.bug_report_dialog_link_wiki)
-            .asLink("https://github.com/thedjchi/Shizuku/releases/wiki#troubleshooting")
+            .asLink("https://github.com/dwicao/Shizuku/issues?q=is%3Aissue+label%3Abug")
 
         val issuesLink = getString(R.string.bug_report_dialog_link_issues)
-            .asLink("https://github.com/thedjchi/Shizuku/releases/issues")
+            .asLink("https://github.com/dwicao/Shizuku/issues")
 
         binding.apply {
             updateText.applyTemplateArgs(updateLink)
@@ -48,27 +46,18 @@ class BugReportDialog : DialogFragment() {
             .setTitle(R.string.settings_report_bug)
             .setView(binding.root)
             .setPositiveButton("GitHub") { _, _ ->
-                CustomTabsHelper.launchUrlOrCopy(context, "https://github.com/thedjchi/Shizuku/issues/new")
+                val body = CrashLog.buildMarkdown(context)
+                val issueUrl = "https://github.com/dwicao/Shizuku/issues/new" +
+                    "?body=" + Uri.encode("Please describe the bug. Include steps to reproduce if possible.\n\n" + body)
+                CustomTabsHelper.launchUrlOrCopy(context, issueUrl)
             }
-            .setNegativeButton(R.string.bug_report_dialog_button_email) { _, _ ->
-                val plainBody = """
-                    Please describe the bug. Include steps to reproduce if possible, as well as any relevant images/logs.
-
-                    Device: ${Build.MANUFACTURER} ${Build.MODEL}
-                    Android Version: ${Build.VERSION.RELEASE}
-                    Shizuku Version: ${BuildConfig.VERSION_NAME}
-                """.trimIndent()
-
-                val intent = Intent(Intent.ACTION_SENDTO, Uri.parse(
-                    "mailto:" + context.getString(R.string.support_email) + 
-                    "?subject=" + Uri.encode("[ISSUE TITLE]") +
-                    "&body=" + Uri.encode(plainBody)
-                ))
+            .setNegativeButton(R.string.bug_report_dialog_button_copy) { _, _ ->
+                val body = CrashLog.buildMarkdown(context)
                 try {
-                    context.startActivity(intent)
-                    dismiss()
-                } catch (e: ActivityNotFoundException) {
-                    Toast.makeText(context, context.getString(R.string.toast_no_email_app), Toast.LENGTH_SHORT).show()
+                    context.getSystemService(android.content.ClipboardManager::class.java).setText(android.content.ClipData.newPlainText("crash log", body))
+                    Toast.makeText(context, context.getString(R.string.toast_copied_to_clipboard), Toast.LENGTH_SHORT).show()
+                } catch (_: Throwable) {
+                    Toast.makeText(context, context.getString(R.string.bug_report_dialog_copy_failed), Toast.LENGTH_SHORT).show()
                 }
             }
             .setNeutralButton(android.R.string.cancel) { dialog, _ ->

@@ -10,6 +10,7 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.net.Uri
 import android.os.Build
+import android.os.SystemClock
 import android.os.IBinder
 import android.provider.Settings
 import android.util.Log
@@ -26,8 +27,9 @@ class WatchdogService : Service() {
 
     private val stateListener: (ShizukuStateMachine.State) -> Unit = {
         if (it == ShizukuStateMachine.State.CRASHED) {
-            showCrashNotification()
-            ShizukuReceiverStarter.start(applicationContext)
+            onServerCrashed()
+        } else if (it == ShizukuStateMachine.State.RUNNING) {
+            consecutiveCrashes.set(0)
         }
     }
 
@@ -109,6 +111,29 @@ class WatchdogService : Service() {
             .build()
     }
 
+    private fun onServerCrashed() {
+        val now = SystemClock.elapsedRealtime()
+        val previous = lastCrashAt
+        val backoffSeconds = (5L shl consecutiveCrashes.get().coerceAtMost(7)).coerceAtMost(600)
+
+        if (previous != 0L && now - previous < backoffSeconds * 1000L) {
+            // Throttled restart: the server is crash-looping, so leave a pending alert
+            // instead of spamming notifications and restarts.
+            ShizukuSettings.setWatchdogAlertPending(true)
+            return
+        }
+
+        consecutiveCrashes.incrementAndGet()
+        lastCrashAt = now
+        val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        if (!nm.areNotificationsEnabled()) {
+            ShizukuSettings.setWatchdogAlertPending(true)
+        } else {
+            showCrashNotification()
+        }
+        ShizukuReceiverStarter.start(applicationContext)
+    }
+
     private fun showCrashNotification() {
         val channelId = CRASH_CHANNEL_ID
         val channelName = "Crash Reports"
@@ -122,7 +147,7 @@ class WatchdogService : Service() {
         nm.createNotificationChannel(channel)
 
         val learnMoreIntent = Intent(Intent.ACTION_VIEW).apply {
-            setData(Uri.parse("https://github.com/thedjchi/Shizuku/wiki#shizuku-keeps-stopping-randomly"))
+            setData(Uri.parse("https://github.com/dwicao/Shizuku/issues?q=is%3Aissue+label%3Abug"))
         }
         val learnMorePendingIntent = PendingIntent.getActivity(this, 0, learnMoreIntent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
 
@@ -148,6 +173,10 @@ class WatchdogService : Service() {
         const val CRASH_CHANNEL_ID = "crash_reports"
 
         private val isRunning = AtomicBoolean(false)
+        private val consecutiveCrashes = java.util.concurrent.atomic.AtomicInteger(0)
+
+        @Volatile
+        private var lastCrashAt = 0L
 
         @JvmStatic
         fun start(context: Context) {

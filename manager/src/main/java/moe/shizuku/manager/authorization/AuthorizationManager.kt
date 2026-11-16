@@ -19,6 +19,10 @@ object AuthorizationManager {
     private const val FLAG_DENIED = 1 shl 2
     private const val MASK_PERMISSION = FLAG_ALLOWED or FLAG_DENIED
 
+    private const val CACHE_TTL_MS = 10_000L
+    private var grantedCacheValidUntil = 0L
+    private val grantedCache = mutableMapOf<Int, Boolean>()
+
     private fun getApplications(userId: Int): List<PackageInfo> {
         val data = Parcel.obtain()
         val reply = Parcel.obtain()
@@ -64,10 +68,18 @@ object AuthorizationManager {
     }
 
     fun granted(packageName: String, uid: Int): Boolean {
-        return if (Shizuku.isPreV11()) {
-            ShizukuSystemApis.checkPermission(Manifest.permission.API_V23, packageName, uid / 100000) == PackageManager.PERMISSION_GRANTED
-        } else {
-            (Shizuku.getFlagsForUid(uid, MASK_PERMISSION) and FLAG_ALLOWED) == FLAG_ALLOWED
+        val now = System.currentTimeMillis()
+        if (now >= grantedCacheValidUntil) {
+            grantedCache.clear()
+            grantedCacheValidUntil = now + CACHE_TTL_MS
+        }
+
+        return grantedCache.getOrPut(uid) {
+            if (Shizuku.isPreV11()) {
+                ShizukuSystemApis.checkPermission(Manifest.permission.API_V23, packageName, uid / 100000) == PackageManager.PERMISSION_GRANTED
+            } else {
+                (Shizuku.getFlagsForUid(uid, MASK_PERMISSION) and FLAG_ALLOWED) == FLAG_ALLOWED
+            }
         }
     }
 
@@ -77,6 +89,7 @@ object AuthorizationManager {
         } else {
             Shizuku.updateFlagsForUid(uid, MASK_PERMISSION, FLAG_ALLOWED)
         }
+        invalidateGrantedCache()
     }
 
     fun revoke(packageName: String, uid: Int) {
@@ -85,5 +98,11 @@ object AuthorizationManager {
         } else {
             Shizuku.updateFlagsForUid(uid, MASK_PERMISSION, 0)
         }
+        invalidateGrantedCache()
+    }
+
+    fun invalidateGrantedCache() {
+        grantedCache.clear()
+        grantedCacheValidUntil = 0L
     }
 }

@@ -1,5 +1,6 @@
 package moe.shizuku.manager
 
+import android.os.Binder
 import android.os.Bundle
 import androidx.core.os.bundleOf
 import kotlinx.coroutines.android.asCoroutineDispatcher
@@ -10,6 +11,7 @@ import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
 import moe.shizuku.api.BinderContainer
+import moe.shizuku.manager.shell.ShellBinderRequestHandler
 import moe.shizuku.manager.utils.Logger.LOGGER
 import moe.shizuku.manager.utils.ShizukuStateMachine
 import rikka.shizuku.Shizuku
@@ -22,6 +24,7 @@ class ShizukuManagerProvider : ShizukuProvider() {
     companion object {
         private const val EXTRA_BINDER = "moe.shizuku.privileged.api.intent.extra.BINDER"
         private const val METHOD_SEND_USER_SERVICE = "sendUserService"
+        internal const val METHOD_REQUEST_BINDER = "requestBinderForShell"
     }
 
     override fun onCreate(): Boolean {
@@ -31,6 +34,20 @@ class ShizukuManagerProvider : ShizukuProvider() {
 
     override fun call(method: String, arg: String?, extras: Bundle?): Bundle? {
         if (extras == null) return null
+
+        if (method == METHOD_REQUEST_BINDER) {
+            // The manager provider is protected by INTERACT_ACROSS_USERS_FULL, which only
+            // shell/root/system callers can use. Keep this path explicit anyway: if the
+            // provider permission is ever widened, random apps must still not receive the
+            // server binder.
+            val uid = Binder.getCallingUid()
+            if (uid != 0 && uid % 100000 != 2000) {
+                LOGGER.w("requestBinderForShell rejected for uid=$uid")
+                return null
+            }
+            val binder = extras.getBinder("binder") ?: return null
+            return if (ShellBinderRequestHandler.handleBinderRequest(context!!, binder)) Bundle() else null
+        }
 
         return if (method == METHOD_SEND_USER_SERVICE) {
             try {

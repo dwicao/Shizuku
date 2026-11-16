@@ -188,7 +188,7 @@
     <string name="bug_report_dialog_issues">Search through all ^1 to see if your bug has already been reported.</string>
     <string name="bug_report_dialog_link_issues">existing issues</string>
     <string name="bug_report_dialog_method">Please submit an issue on ^1 if you have an account.</string>
-    <string name="bug_report_dialog_method_2">Otherwise, you can send an email.</string>
+    <string name="bug_report_dialog_method_2">Otherwise, you can copy the crash log to your clipboard.</string>
     <string name="bug_report_dialog_button_email">Email</string>
 
     <!-- Snackbar -->
@@ -196,6 +196,8 @@
     <string name="snackbar_battery_optimization_home">Battery optimization must be disabled for start on boot/watchdog to work properly.</string>
     <string name="snackbar_battery_optimization_settings">Please disable battery optimization to use this feature.</string>
     <string name="snackbar_action_fix">Fix</string>
+    <string name="watchdog_alert_pending">Shizuku stopped and its watchdog alert was suppressed or muted. Tap to report it.</string>
+    <string name="watchdog_alert_pending_action">Report</string>
     <string name="snackbar_update_available">A new update is available</string>
     <string name="snackbar_action_update">Update</string>
 
@@ -210,6 +212,8 @@
     <string name="update_incompatible_package">This update can\'t be installed over this version. Please uninstall this app, then install the new release manually.</string>
 
     <!-- Toast -->
+    <string name="bug_report_dialog_button_copy">Copy crash log</string>
+    <string name="bug_report_dialog_copy_failed">Couldn\'t copy the crash log to the clipboard</string>
     <string name="toast_no_email_app">No email app found</string>
     <string name="toast_shizuku_already_starting">Shizuku is already starting in the background</string>
     <string name="toast_accessibility_tv_only">This service is only supported on TV devices</string>

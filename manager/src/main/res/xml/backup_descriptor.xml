@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <full-backup-content xmlns:tools="http://schemas.android.com/tools">
+    <!-- Settings only. Never back up filesDir (signing keys, downloaded APKs, crash logs). -->
     <include
         domain="sharedpref"
         path="settings.xml" />

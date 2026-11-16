@@ -12,6 +12,7 @@ import moe.shizuku.manager.R
 import moe.shizuku.manager.ShizukuApplication
 import moe.shizuku.manager.ShizukuSettings
 import moe.shizuku.manager.utils.ApkUtils.*
+import moe.shizuku.manager.utils.ApkSignature
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
@@ -24,62 +25,6 @@ object UpdateHelper {
 
     private val client = OkHttpClient()
     private val json = Json { ignoreUnknownKeys = true }
-
-    data class Version(
-        val major: Int,
-        val minor: Int,
-        val patch: Int,
-        val commit: Int = 0,
-    ) : Comparable<Version> {
-        override fun compareTo(other: Version): Int =
-            compareValuesBy(
-                this,
-                other,
-                { it.major },
-                { it.minor },
-                { it.patch },
-                { it.commit },
-            )
-
-        override fun toString(): String =
-            if (commit == 0)  "$major.$minor.$patch" else "$major.$minor.$patch.r$commit"
-
-        companion object {
-            // Handles both "13.9.0-dwicao" (stable, commit = 0) and "13.9.0-r1369-beta-dwicao"
-            // (beta, commit = 1369) so beta builds compare newer than the stable they branched from.
-            fun parse(tag: String): Version? {
-                val regex = Regex("""(\d+)\.(\d+)\.(\d+)(?:-r(\d+))?""")
-                val match = regex.find(tag) ?: return null
-                val (major, minor, patch, commit) = match.destructured
-                return Version(
-                    major.toInt(),
-                    minor.toInt(),
-                    patch.toInt(),
-                    commit.toIntOrNull() ?: 0
-                )
-            }
-        }
-    }
-
-    data class Release(
-        val version: Version,
-        val filename: String,
-        val url: String,
-        val digest: String
-    )
-
-    @Serializable
-    data class VersionJson(
-        val stable: ChannelJson? = null,
-        val beta: ChannelJson? = null,
-    )
-
-    @Serializable
-    data class ChannelJson(
-        val versionName: String,
-        val apkUrl: String,
-        val sha256: String,
-    )
 
     private lateinit var latestRelease: Release
 
@@ -238,6 +183,13 @@ object UpdateHelper {
             if (!downloadedDigest.equals(digest, ignoreCase = true)) {
                 apkFile.delete()
                 throw SecurityException("Digest of downloaded file does not match version.json")
+            }
+
+            try {
+                ApkSignature.verifyUpdateApk(apkFile)
+            } catch (e: Exception) {
+                apkFile.delete()
+                throw e
             }
 
             apkFile

@@ -41,6 +41,7 @@ public class ShizukuSettings {
         public static final String KEY_REPORT_BUG = "report_bug";
         public static final String KEY_LEGACY_PAIRING = "legacy_pairing";
         public static final String KEY_CATEGORY_ADVANCED = "category_advanced";
+        public static final String KEY_WATCHDOG_ALERT_PENDING = "watchdog_alert_pending";
     }
 
     public static class UpdateMode {
@@ -149,6 +150,14 @@ public class ShizukuSettings {
         getPreferences().edit().putBoolean(Keys.KEY_START_ON_BOOT, enable).apply();
     }
     
+    public static boolean getWatchdogAlertPending() {
+        return getPreferences().getBoolean(Keys.KEY_WATCHDOG_ALERT_PENDING, false);
+    }
+
+    public static void setWatchdogAlertPending(boolean pending) {
+        getPreferences().edit().putBoolean(Keys.KEY_WATCHDOG_ALERT_PENDING, pending).apply();
+    }
+
     public static boolean getWatchdog() {
         return getPreferences().getBoolean(Keys.KEY_WATCHDOG, false);
     }

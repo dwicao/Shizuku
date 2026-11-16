@@ -8,6 +8,7 @@ An Android app that allows other apps to use system-level APIs that require ADB/
 [![Downloads](https://img.shields.io/github/downloads/dwicao/Shizuku/total?style=for-the-badge&color=bf7830&labelColor=805020&label=Downloads&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHRpdGxlPmRvd25sb2FkPC90aXRsZT48cGF0aCBkPSJNNSwyMEgxOVYxOEg1TTE5LDlIMTVWM0g5VjlINUwxMiwxNkwxOSw5WiIgZmlsbD0id2hpdGUiIC8+PC9zdmc+)](https://github.com/dwicao/Shizuku/releases)
 [![Latest Release](https://img.shields.io/github/v/release/dwicao/Shizuku?style=for-the-badge&color=3060bf&labelColor=204080&label=Latest%20Release&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGhlaWdodD0iMjRweCIgdmlld0JveD0iMCAtOTYwIDk2MCA5NjAiIHdpZHRoPSIyNHB4IiBmaWxsPSIjZTNlM2UzIj48cGF0aCBkPSJNNDQwLTgycS03Ni04LTE0MS41LTQxLjV0LTExNC04N1ExMzYtMjY0IDEwOC0zMzNUODAtNDgwcTAtOTEgMzYuNS0xNjhUMjE2LTc4MGgtOTZ2LTgwaDI0MHYyNDBoLTgwdi0xMDlxLTU1IDQ0LTg3LjUgMTA4LjVUMTYwLTQ4MHEwIDEyMyA4MC41IDIxMi41VDQ0MC0xNjN2ODFabS0xNy0yMTRMMjU0LTQ2Nmw1Ni01NiAxMTMgMTEzIDIyNy0yMjcgNTYgNTctMjgzIDI4M1ptMTc3IDE5NnYtMjQwaDgwdjEwOXE1NS00NSA4Ny41LTEwOVQ4MDAtNDgwcTAtMTIzLTgwLjUtMjEyLjVUNTIwLTc5N3YtODFxMTUyIDE1IDI1NiAxMjh0MTA0IDI3MHEwIDkxLTM2LjUgMTY4VDc0NC0xODBoOTZ2ODBINjAwWiIvPjwvc3ZnPg==)](https://github.com/dwicao/Shizuku/releases/latest)
 [![Issues](https://img.shields.io/github/issues-search/dwicao/Shizuku?query=state%3Aopen&style=for-the-badge&color=bf3030&labelColor=802020&label=Open%20Issues)](https://github.com/dwicao/Shizuku/issues)
+[![Checks](https://img.shields.io/github/actions/workflow/status/dwicao/Shizuku/checks.yml?branch=master&style=for-the-badge&logo=github-actions&label=Checks)](https://github.com/dwicao/Shizuku/actions/workflows/checks.yml)
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-bfb330?style=for-the-badge&logo=buymeacoffee&logoColor=ffffff)](https://www.buymeacoffee.com/thedjchi)
 
 ## ⚠️ Fork Notice & Attribution
@@ -59,7 +60,7 @@ You can also tap the compatibility card on that screen to copy a code snippet yo
 ### Things to know
 
 * Apps that were allowed to use Shizuku keep their permission — it is restored automatically when the service starts.
-* **rish** users: re-export the files.
+* **rish** users: re-export the files. Starting with v13.10.0, rish requests the binder through the manager provider instead of a broadcast, so older exported rish files no longer work.
 * **Automation intent** users: intents use this build's package name (`moe.dwicao.shizuku`).
 * **Updates:** updates are installed from within the app (or by installing the release APK manually — same package, same signature). Update detection uses [`version.json`](version.json) in this repository instead of the GitHub Releases API.
 * Some apps may still be able to detect this build of Shizuku.

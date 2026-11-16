@@ -28,6 +28,7 @@ import moe.shizuku.manager.home.showAccessibilityDialog
 import moe.shizuku.manager.ktx.toHtml
 import moe.shizuku.manager.management.AppsViewModel
 import moe.shizuku.manager.settings.SettingsActivity
+import moe.shizuku.manager.settings.BugReportDialog
 import moe.shizuku.manager.utils.AppIconCache
 import moe.shizuku.manager.utils.CustomTabsHelper
 import moe.shizuku.manager.utils.EnvironmentUtils
@@ -47,6 +48,7 @@ abstract class HomeActivity : AppBarActivity() {
     private val homeModel: HomeViewModel by viewModels()
     private val appsModel: AppsViewModel by viewModels()
     private val adapter by unsafeLazy { HomeAdapter(homeModel, appsModel, lifecycleScope) }
+    private lateinit var homeBinding: HomeActivityBinding
 
     private val stateListener: (ShizukuStateMachine.State) -> Unit = {
         if (ShizukuStateMachine.isRunning()) {
@@ -61,6 +63,7 @@ abstract class HomeActivity : AppBarActivity() {
         super.onCreate(savedInstanceState)
 
         val binding = HomeActivityBinding.inflate(layoutInflater, rootView, true)
+        homeBinding = binding
 
         homeModel.serviceStatus.observe(this) {
             if (it.status == Status.SUCCESS) {
@@ -152,6 +155,7 @@ abstract class HomeActivity : AppBarActivity() {
 
     override fun onResume() {
         super.onResume()
+        showWatchdogAlertIfPending()
         checkServerStatus()
         appsModel.load()
     }
@@ -191,6 +195,21 @@ abstract class HomeActivity : AppBarActivity() {
             .show()
     }
 
+    private fun showWatchdogAlertIfPending() {
+        if (!ShizukuSettings.getWatchdogAlertPending()) return
+        SnackbarHelper.show(
+            this,
+            homeBinding.root,
+            msg = getString(R.string.watchdog_alert_pending),
+            duration = Snackbar.LENGTH_INDEFINITE,
+            actionText = getString(R.string.watchdog_alert_pending_action),
+            action = {
+                BugReportDialog().show(supportFragmentManager, "BugReportDialog")
+            }
+        )
+        ShizukuSettings.setWatchdogAlertPending(false)
+    }
+
     private fun checkServerStatus() {
         homeModel.reload()
     }
@@ -212,7 +231,7 @@ abstract class HomeActivity : AppBarActivity() {
                 binding.sourceCode.movementMethod = LinkMovementMethod.getInstance()
                 binding.sourceCode.text = getString(
                     R.string.about_view_source_code,
-                    "<b><a href=\"https://github.com/thedjchi/Shizuku\">GitHub</a></b>"
+                    "<b><a href=\"https://github.com/dwicao/Shizuku\">GitHub</a></b>"
                 ).toHtml()
                 binding.icon.setImageBitmap(
                     AppIconCache.getOrLoadBitmap(

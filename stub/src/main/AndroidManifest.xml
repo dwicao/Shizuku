@@ -32,14 +32,6 @@
             </intent-filter>
         </activity>
 
-        <receiver
-            android:name=".StubBinderRequestReceiver"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="rikka.shizuku.intent.action.REQUEST_BINDER" />
-            </intent-filter>
-        </receiver>
-
         <provider
             android:name=".StubShizukuProvider"
             android:authorities="moe.shizuku.privileged.api.shizuku"

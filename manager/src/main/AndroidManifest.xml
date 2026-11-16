@@ -76,6 +76,8 @@
         android:autoRevokePermissions="allowed"
         android:banner="@drawable/ic_launcher"
         android:dataExtractionRules="@xml/data_extraction_rules"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:usesCleartextTraffic="false"
         android:directBootAware="true"
         android:enableOnBackInvokedCallback="true"
         android:fullBackupContent="@xml/backup_descriptor"
@@ -147,18 +149,6 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".legacy.ShellRequestHandlerActivity"
-            android:directBootAware="true"
-            android:excludeFromRecents="true"
-            android:exported="true"
-            android:theme="@style/GrantPermissions">
-            <intent-filter>
-                <action android:name="rikka.shizuku.intent.action.REQUEST_BINDER" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-        </activity>
-        <activity
             android:name=".legacy.LegacyIsNotSupportedActivity"
             android:excludeFromRecents="true"
             android:exported="true"
@@ -202,17 +192,6 @@
                     The watchdog service uses minimal resources and battery. There is no constant polling; it only reacts when the API service stops unexpectedly.
                     The watchdog service is opt-in and toggleable via settings, so users can choose to disable it at any time if not desired." />
         </service>
-
-        <receiver
-            android:name=".receiver.BinderRequestReceiver"
-            android:directBootAware="true"
-            android:enabled="true"
-            android:exported="true"
-            tools:ignore="ExportedReceiver">
-            <intent-filter>
-                <action android:name="rikka.shizuku.intent.action.REQUEST_BINDER" />
-            </intent-filter>
-        </receiver>
 
         <receiver
             android:name=".receiver.BootCompleteReceiver"

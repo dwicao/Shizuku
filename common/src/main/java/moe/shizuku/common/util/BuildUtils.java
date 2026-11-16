@@ -3,7 +3,7 @@ package moe.shizuku.common.util;
 import android.os.Build;
 
 /**
- * TODO: Replace it with {@link rikka.core.util.BuildUtils}.
+ * Build checks used by the server module (kept dependency-free).
  */
 public class BuildUtils {
 

@@ -1,7 +1,6 @@
 package moe.shizuku.manager.shell
 
 import android.content.Context
-import android.content.Intent
 import android.os.IBinder
 import android.os.Parcel
 import moe.shizuku.manager.utils.Logger.LOGGER
@@ -9,15 +8,11 @@ import rikka.shizuku.Shizuku
 
 object ShellBinderRequestHandler {
 
-    fun handleRequest(context: Context, intent: Intent): Boolean {
-        if (intent.action != "rikka.shizuku.intent.action.REQUEST_BINDER") {
-            return false
-        }
-
-        val binder = intent.getBundleExtra("data")?.getBinder("binder") ?: return false
+    fun handleBinderRequest(context: Context, binder: IBinder): Boolean {
         val shizukuBinder = Shizuku.getBinder()
         if (shizukuBinder == null) {
             LOGGER.w("Binder not received or Shizuku service not running")
+            return false
         }
 
         val data = Parcel.obtain()
