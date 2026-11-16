@@ -2,14 +2,15 @@ package moe.shizuku.manager.settings
 
 import android.app.Dialog
 import android.app.NotificationManager
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.DialogInterface
-import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
 import androidx.fragment.app.DialogFragment
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import moe.shizuku.manager.BuildConfig
 import moe.shizuku.manager.R
 import moe.shizuku.manager.databinding.BugReportDialogBinding
 import moe.shizuku.manager.ktx.asLink
@@ -54,7 +55,8 @@ class BugReportDialog : DialogFragment() {
             .setNegativeButton(R.string.bug_report_dialog_button_copy) { _, _ ->
                 val body = CrashLog.buildMarkdown(context)
                 try {
-                    context.getSystemService(android.content.ClipboardManager::class.java).setText(android.content.ClipData.newPlainText("crash log", body))
+                    context.getSystemService(ClipboardManager::class.java)
+                        .setPrimaryClip(ClipData.newPlainText("crash log", body))
                     Toast.makeText(context, context.getString(R.string.toast_copied_to_clipboard), Toast.LENGTH_SHORT).show()
                 } catch (_: Throwable) {
                     Toast.makeText(context, context.getString(R.string.bug_report_dialog_copy_failed), Toast.LENGTH_SHORT).show()
