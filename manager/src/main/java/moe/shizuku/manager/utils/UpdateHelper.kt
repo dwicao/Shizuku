@@ -148,6 +148,7 @@ object UpdateHelper {
                 } else {
                     parsed.stable ?: parsed.beta
                 }
+                    ?.forPackage(app.packageName)
                     ?: throw Exception("No releases in version.json")
 
             val version = Version.parse(channel.versionName) ?: throw Exception("Invalid versionName in version.json")

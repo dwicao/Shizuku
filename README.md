@@ -25,9 +25,16 @@ All credit for the original app and the upstream added features goes to RikkaApp
 
 ## ⬇️ Download
 
-Get the latest release from [GitHub Releases](https://github.com/dwicao/Shizuku/releases/latest).
+Get the latest release from [GitHub Releases](https://github.com/dwicao/Shizuku/releases/latest). Every release ships two APKs:
 
-> **Note — one-time identity change:** starting with v13.9.0, this fork uses its own package name (`moe.dwicao.shizuku`) instead of `moe.shizuku.privileged.api`. The v13.8.0 and earlier builds **cannot be updated in place** — uninstall them first, then install the new build and pair it again. Updating *within* the app works normally from then on (see [🥷 Stealth Mode](#-stealth-mode)).
+| Variant | File | Package | Best for |
+|---|---|---|---|
+| **Normal (stealth)** | `shizuku-…-dwicao-release.apk` | `moe.dwicao.shizuku` | Most devices; hidden from apps checking the original package |
+| **Compatibility** | `shizuku-…-compat-dwicao-release.apk` | `moe.shizuku.privileged.api` | Android 13 / Samsung devices that refuse the package fork (“App not installed”); works like the original Shizuku package |
+
+The two variants use the same source, signing certificate, and minimum/target SDK. They cannot be installed over each other (different package names), and users switching variants must uninstall first.
+
+> **Note — package variants:** this fork can be built as either `moe.dwicao.shizuku` (normal) or `moe.shizuku.privileged.api` (compatibility). Switching variants is a one-time migration: uninstall the other variant first. Version updates inside the app work for both because `version.json` publishes both APKs.
 
 ## ✨ What's in this fork
 

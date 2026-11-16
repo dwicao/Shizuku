@@ -50,4 +50,25 @@ class UpdateModelsTest {
         assertEquals("abc123", parsed.stable?.sha256)
         assertEquals(null, parsed.beta)
     }
+
+    @Test
+    fun selectsPackageSpecificVariant() {
+        val channel = ChannelJson(
+            versionName = "13.11.0-dwicao",
+            apkUrl = "https://example.test/normal.apk",
+            sha256 = "normal",
+            variants = mapOf(
+                "moe.shizuku.privileged.api" to VariantJson(
+                    versionName = "13.11.0-compat-dwicao",
+                    apkUrl = "https://example.test/compat.apk",
+                    sha256 = "compat",
+                )
+            ),
+        )
+
+        val selected = channel.forPackage("moe.shizuku.privileged.api")
+        assertEquals("13.11.0-compat-dwicao", selected.versionName)
+        assertEquals("compat", selected.sha256)
+        assertEquals("13.11.0-dwicao", channel.forPackage("moe.dwicao.shizuku").versionName)
+    }
 }

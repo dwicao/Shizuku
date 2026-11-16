@@ -35,3 +35,5 @@ jobs:
           echo 'org.gradle.caching=true' >> gradle.properties
           echo 'org.gradle.parallel=true' >> gradle.properties
           ./gradlew :manager:assembleDebug :manager:testDebugUnitTest
+          ./gradlew :server:clean :starter:clean :shell:clean :rish:clean :stub:clean :manager:clean
+          ./gradlew :manager:assembleDebug -Pcompat

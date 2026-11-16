@@ -14,7 +14,7 @@ plugins {
 android {
     namespace = "moe.shizuku.manager"
     defaultConfig {
-        applicationId = "moe.dwicao.shizuku"
+        applicationId = rootProject.ext.managerApplicationId
         versionCode = rootProject.ext.versionCode
         versionName = rootProject.ext.versionName
         externalNativeBuild {

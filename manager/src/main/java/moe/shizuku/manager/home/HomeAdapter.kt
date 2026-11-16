@@ -7,7 +7,9 @@ import moe.shizuku.manager.utils.EnvironmentUtils
 import moe.shizuku.manager.utils.UserHandleCompat
 import rikka.recyclerview.IdBasedRecyclerViewAdapter
 import rikka.recyclerview.IndexCreatorPool
+import moe.shizuku.manager.BuildConfig
 import rikka.shizuku.Shizuku
+import moe.shizuku.manager.utils.ApkUtils.ORIGINAL_PACKAGE_NAME
 
 class HomeAdapter(private val homeModel: HomeViewModel, private val appsModel: AppsViewModel, private val scope: CoroutineScope) :
     IdBasedRecyclerViewAdapter(ArrayList()) {
@@ -68,7 +70,11 @@ class HomeAdapter(private val homeModel: HomeViewModel, private val appsModel: A
         }
         addItem(AutomationViewHolder.CREATOR, null, ID_AUTOMATION)
 
-        addItem(StealthViewHolder.CREATOR, null, ID_STEALTH)
+        if (BuildConfig.APPLICATION_ID != ORIGINAL_PACKAGE_NAME) {
+            // Compatibility builds keep the original package name, so the stub has nothing to shadow.
+            // Showing it would only offer an APK that cannot install over this build.
+            addItem(StealthViewHolder.CREATOR, null, ID_STEALTH)
+        }
 
         addItem(LearnMoreViewHolder.CREATOR, null, ID_LEARN_MORE)
         notifyDataSetChanged()

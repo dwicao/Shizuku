@@ -27,9 +27,15 @@ subprojects { subproject ->
 }
 
 def gitCommitCount = Integer.parseInt("git rev-list --count HEAD".execute([], project.rootDir).text.trim())
-def baseVersionName = "13.10.1"
+def baseVersionName = "13.11.0"
 def isBeta = project.hasProperty("beta")
+// `./gradlew :manager:assembleRelease -Pcompat` builds the Samsung/Android 13 compatibility
+// variant: same code and certificate, but the original package name that those devices accept.
+def isCompat = project.hasProperty("compat")
+def managerApplicationId = isCompat ? "moe.shizuku.privileged.api" : "moe.dwicao.shizuku"
+def versionNameSuffix = isCompat ? "-compat-dwicao" : "-dwicao"
 ext {
     versionCode = gitCommitCount
-    versionName = "${baseVersionName}${if (isBeta) "-r${gitCommitCount}-beta" else ""}-dwicao"
+    versionName = "${baseVersionName}${if (isBeta) "-r${gitCommitCount}-beta" else ""}${versionNameSuffix}"
+    managerApplicationId = managerApplicationId
 }

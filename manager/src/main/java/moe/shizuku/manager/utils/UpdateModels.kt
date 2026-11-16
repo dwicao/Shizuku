@@ -54,4 +54,22 @@ data class ChannelJson(
     val versionName: String,
     val apkUrl: String,
     val sha256: String,
+    val variants: Map<String, VariantJson> = emptyMap(),
 )
+
+@Serializable
+data class VariantJson(
+    val versionName: String,
+    val apkUrl: String,
+    val sha256: String,
+)
+
+fun ChannelJson.forPackage(packageName: String): ChannelJson {
+    val variant = variants[packageName] ?: return this
+    return ChannelJson(
+        versionName = variant.versionName,
+        apkUrl = variant.apkUrl,
+        sha256 = variant.sha256,
+        variants = variants,
+    )
+}

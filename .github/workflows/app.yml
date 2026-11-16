@@ -83,36 +83,42 @@ jobs:
 
           [ "${{ inputs.prerelease }}" = "true" ] && CMD="$CMD -Pbeta"
 
-          eval $CMD
-          FILE=$(ls "$APK_DIR"/*.apk)
+          if [ "${{ inputs.debug }}" = "true" ]; then
+            eval $CMD
+            FILE=$(ls "$APK_DIR"/*.apk)
+            VERSION=$(echo "$(basename "$FILE")" | sed -E 's/^shizuku-(.*)-(debug|release)\.apk/\1/')
+            mkdir -p dist && cp "$FILE" "dist/"
+          else
+            eval $CMD
+            NORMAL_FILE=$(ls "$APK_DIR"/*.apk)
+            VERSION=$(echo "$(basename "$NORMAL_FILE")" | sed -E 's/^shizuku-(.*)-(debug|release)\.apk/\1/')
+            mkdir -p dist
+            cp "$NORMAL_FILE" "dist/"
 
-          VERSION=$(echo "$(basename "$FILE")" | sed -E 's/^shizuku-(.*)-(debug|release)\.apk/\1/')
-
-          ARTIFACT_NAME="shizuku-$VERSION"
-          [ "${{ inputs.debug }}" = "true" ] && ARTIFACT_NAME="${ARTIFACT_NAME}-debug"
-          ARTIFACT_NAME="${ARTIFACT_NAME}.apk"
-
-          RENAMED="$FILE"
-          if [ "$(basename "$FILE")" != "$ARTIFACT_NAME" ]; then
-            RENAMED="$(dirname "$FILE")/$ARTIFACT_NAME"
-            mv "$FILE" "$RENAMED"
+            # Rebuild as compat from a clean tree: server/rish/shell also embed the
+            # application id, so clean the whole native/Kotlin chain rather than just the manager.
+            ./gradlew :server:clean :starter:clean :shell:clean :rish:clean :stub:clean :manager:clean
+            COMPAT_CMD="./gradlew :manager:assembleRelease"
+            [ "${{ inputs.prerelease }}" = "true" ] && COMPAT_CMD="$COMPAT_CMD -Pbeta"
+            eval "$COMPAT_CMD -Pcompat"
+            COMPAT_FILE=$(ls "$APK_DIR"/*.apk)
+            cp "$COMPAT_FILE" "dist/"
           fi
 
           echo "versionName=$VERSION" >> $GITHUB_OUTPUT
-          echo "artifactName=$ARTIFACT_NAME" >> $GITHUB_OUTPUT
-          echo "filePath=$RENAMED" >> $GITHUB_OUTPUT
+          echo "artifactName=release-apks" >> $GITHUB_OUTPUT
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v6
         with:
-          name: ${{ steps.buildWithGradle.outputs.artifactName }}
-          path: ${{ steps.buildWithGradle.outputs.filePath }}
+          name: release-apks
+          path: dist/
 
       - name: Attest Build Provenance
         if: ${{ success() && !inputs.debug }}
         uses: actions/attest-build-provenance@v3
         with:
-          subject-path: manager/build/outputs/apk/release/*.apk
+          subject-path: dist/*.apk
 
   release:
     if: ${{ !inputs.debug }}
@@ -155,28 +161,44 @@ jobs:
           RELEASE_VERSION: ${{ needs.build.outputs.versionName }}
           IS_PRERELEASE: ${{ inputs.prerelease }}
         run: |
-          APK=$(ls files/*.apk)
-          NAME=$(basename "$APK")
-          SHA256=$(sha256sum "$APK" | cut -d' ' -f1)
-
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git fetch origin master
           git checkout -B master origin/master
 
-          python3 - "$RELEASE_VERSION" "$NAME" "$SHA256" "$IS_PRERELEASE" <<'EOF'
-          import json, pathlib, sys
-          version, name, sha256, prerelease = sys.argv[1:5]
-          tag = version                               # v13.9.0-dwicao (tag + asset URLs)
-          version = version.removeprefix("v")          # 13.9.0-dwicao (matches BuildConfig.VERSION_NAME)
-          entry = {
-              "versionName": version,
-              "apkUrl": f"https://github.com/dwicao/Shizuku/releases/download/{tag}/{name}",
-              "sha256": sha256,
+          python3 - "$RELEASE_VERSION" "$IS_PRERELEASE" <<'EOF'
+          import glob
+          import hashlib
+          import json
+          import pathlib
+          import sys
+
+          tag, prerelease = sys.argv[1:3]
+          apks = sorted(glob.glob("files/*.apk"))
+
+          def entry_for(path: str):
+              p = pathlib.Path(path)
+              version = p.name.removeprefix("shizuku-").removesuffix("-release.apk").removeprefix("v")
+              return {
+                  "versionName": version,
+                  "apkUrl": f"https://github.com/dwicao/Shizuku/releases/download/{tag}/{p.name}",
+                  "sha256": hashlib.sha256(p.read_bytes()).hexdigest(),
+              }
+
+          normal = next((entry_for(a) for a in apks if "-compat-dwicao-release.apk" not in pathlib.Path(a).name), None)
+          compat = next((entry_for(a) for a in apks if "-compat-dwicao-release.apk" in pathlib.Path(a).name), None)
+          if normal is None or compat is None:
+              raise SystemExit(f"Expected both normal and compat APKs, got: {apks}")
+
+          stable = dict(normal)
+          stable["variants"] = {
+              "moe.dwicao.shizuku": dict(normal),
+              "moe.shizuku.privileged.api": dict(compat),
           }
+
           p = pathlib.Path("version.json")
           data = json.loads(p.read_text()) if p.exists() else {"stable": None, "beta": None}
-          data["beta" if prerelease == "true" else "stable"] = entry
+          data["beta" if prerelease == "true" else "stable"] = stable
           p.write_text(json.dumps(data, indent=2) + "\n")
           EOF
 
